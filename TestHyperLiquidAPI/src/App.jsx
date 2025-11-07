@@ -1,8 +1,10 @@
-import ApiPlayground from './ApiPlayground'
 import './App.css'
+import SimpleApiPlayground from './SimpleApiPlayground'
 
 function App() {
-  return <ApiPlayground />
+  console.log('App component is rendering');
+  
+  return <SimpleApiPlayground />;
 }
 
-export default App
+export default App;
