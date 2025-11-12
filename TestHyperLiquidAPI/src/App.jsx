@@ -5,10 +5,13 @@ function App() {
   const [selectedEndpoint, setSelectedEndpoint] = useState('allMids');
   const [response, setResponse] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(false);
 
   const endpoints = [
     { id: 'allMids', name: 'All Mids - Prix du marché', body: { type: 'allMids' } },
     { id: 'meta', name: 'Meta - Métadonnées', body: { type: 'meta' } },
+    { id: 'metaPerp', name: 'Afficher PERP - Liste PERP disponibles', body: { type: 'meta' } },
+    { id: 'metaSpot', name: 'Afficher SPOT - Liste SPOT disponibles', body: { type: 'metaAndAssetCtxs' } },
     { id: 'l2Book', name: 'L2 Book - Carnet d\'ordres', body: { type: 'l2Book', coin: 'BTC' } },
   ];
 
@@ -34,6 +37,56 @@ function App() {
     }
   }
 
+  // =====================================================================
+  // Récupère la liste des marchés PERP ou SPOT via metaAndAssetCtxs
+  // Robustesse: tente plusieurs structures possibles et fallback en brut
+  // =====================================================================
+  async function fetchAndListMarkets(kind) {
+    setListLoading(true);
+    setResponse(null);
+    try {
+      const res = await fetch('https://api.hyperliquid.xyz/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'metaAndAssetCtxs' })
+      });
+      const data = await res.json();
+
+      // Extraction univers + contextes (plusieurs formes possibles)
+      const universe = data?.universe || data?.meta?.universe || [];
+      const ctxs = data?.assetCtxs || data?.ctxs || [];
+
+      let results = [];
+      if (Array.isArray(universe) && Array.isArray(ctxs) && universe.length === ctxs.length) {
+        results = universe.map((asset, idx) => ({ asset, ctx: ctxs[idx] }))
+          .filter(({ ctx }) => {
+            // Détection de type PERP/SPOT selon différents schémas rencontrés
+            const isPerp = ctx?.isPerp === true || ctx?.perp !== undefined || ctx?.type === 'perp' || ctx?.pf?.type === 'perp';
+            const isSpot = ctx?.isSpot === true || ctx?.spot !== undefined || ctx?.type === 'spot' || ctx?.pf?.type === 'spot';
+            return kind === 'perp' ? isPerp : isSpot;
+          })
+          .map(({ asset }) => asset?.name)
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b));
+      }
+
+      // Si parsing réussi, retourner liste compacte, sinon brut
+      if (results.length > 0) {
+        setResponse({
+          kind,
+          count: results.length,
+          markets: results
+        });
+      } else {
+        setResponse({ note: 'Structure inattendue, affichage brut', data });
+      }
+    } catch (err) {
+      setResponse({ error: err.message });
+    } finally {
+      setListLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -52,6 +105,24 @@ function App() {
               <option key={ep.id} value={ep.id}>{ep.name}</option>
             ))}
           </select>
+
+          {/* Boutons rapides PERP / SPOT */}
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => fetchAndListMarkets('perp')}
+              disabled={listLoading}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded"
+            >
+              {listLoading ? 'Chargement PERP...' : 'Afficher PERP (liste dispo)'}
+            </button>
+            <button
+              onClick={() => fetchAndListMarkets('spot')}
+              disabled={listLoading}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded"
+            >
+              {listLoading ? 'Chargement SPOT...' : 'Afficher SPOT (liste dispo)'}
+            </button>
+          </div>
         </div>
 
         {/* Bouton Envoyer */}
