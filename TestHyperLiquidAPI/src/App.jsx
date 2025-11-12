@@ -5,7 +5,7 @@
  * 
  * Ce composant gère :
  * 1. L'initialisation du service de mapping des assets Hyperliquid
- * 2. Le chargement et affichage du playground API
+ * 2. Le chargement et affichage du dashboard BTC ou du playground API
  * 3. Les tests de structure au démarrage (en développement)
  * 
  * INITIALISATION AU DÉMARRAGE :
@@ -16,7 +16,8 @@
  * ARCHITECTURE :
  * --------------
  * App (ce fichier)
- *   └─ SimpleApiPlayground (interface utilisateur)
+ *   ├─ BtcDashboard (dashboard temps réel BTC/USDT)
+ *   └─ SimpleApiPlayground (interface utilisateur de test API)
  *       ├─ config/endpoints.js (configuration des endpoints)
  *       ├─ api/hyperliquidService.js (service API)
  *       ├─ services/assetMappingService.js (mapping Asset ID ↔ Nom)
@@ -25,6 +26,7 @@
 
 import React, { useState } from 'react'
 import './App.css'
+import BtcDashboard from './components/BtcDashboard'
 import SimpleApiPlayground from './SimpleApiPlayground'
 import { runQuickTest } from './utils/quickTest'
 import assetMapping from './services/assetMappingService'
@@ -43,6 +45,13 @@ function App() {
    * Stocke les erreurs éventuelles lors du chargement
    */
   const [initError, setInitError] = useState(null);
+
+  /**
+   * État de sélection de la vue
+   * 'dashboard' = Dashboard BTC/USDT
+   * 'playground' = API Playground
+   */
+  const [currentView, setCurrentView] = useState('dashboard');
 
   /**
    * ========================================================================
@@ -156,9 +165,47 @@ function App() {
    * AFFICHAGE NORMAL DE L'APPLICATION
    * ========================================================================
    * 
-   * Une fois l'initialisation réussie, affiche le playground
+   * Une fois l'initialisation réussie, affiche le dashboard BTC ou le playground
    */
-  return <SimpleApiPlayground />;
+  return (
+    <>
+      {/* Barre de navigation pour switcher entre les vues */}
+      <nav className="bg-gray-800 border-b border-gray-700">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-bold text-white">Hyperliquid Dashboard</h1>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentView('dashboard')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentView === 'dashboard'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                ₿ Dashboard BTC
+              </button>
+              <button
+                onClick={() => setCurrentView('playground')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentView === 'playground'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                🚀 API Playground
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Affichage conditionnel de la vue sélectionnée */}
+      {currentView === 'dashboard' ? <BtcDashboard /> : <SimpleApiPlayground />}
+    </>
+  );
 }
 
 export default App;
