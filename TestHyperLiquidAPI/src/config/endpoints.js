@@ -188,6 +188,12 @@ export const ALL_ENDPOINTS = [
 ];
 
 /**
+ * 🎯 ALIAS POUR COMPATIBILITÉ
+ * HYPERLIQUID_ENDPOINTS = tous les endpoints disponibles
+ */
+export const HYPERLIQUID_ENDPOINTS = ALL_ENDPOINTS;
+
+/**
  * 🏷️ CATÉGORIES D'ENDPOINTS
  * Pour organiser l'interface utilisateur
  */

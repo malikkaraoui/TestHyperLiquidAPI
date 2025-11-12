@@ -23,7 +23,7 @@
 
 import React, { useState } from 'react';
 import { HYPERLIQUID_ENDPOINTS } from './config/endpoints.js';
-import hyperliquidApi from './api/hyperliquidService.js';
+import { hyperliquidApi } from './api/hyperliquidService.js';
 import ResponseDisplay from './components/ResponseDisplay.jsx';
 
 /**

@@ -6,8 +6,8 @@
  * avant d'intégrer à l'interface principale.
  */
 
-import { PUBLIC_ENDPOINTS, getBeginnerEndpoints } from '../config/endpoints.js';
-import { hyperliquidApi, testApiConnection } from '../api/hyperliquidService.js';
+import { HYPERLIQUID_ENDPOINTS } from '../config/endpoints.js';
+import { hyperliquidApi } from '../api/hyperliquidService.js';
 import { replaceParametersInObject } from '../utils/parameterUtils.js';
 
 /**
@@ -18,16 +18,15 @@ export async function runQuickTest() {
 
   // ✅ Test 1 : Vérification de la configuration des endpoints
   console.log('1️⃣ Test de la configuration des endpoints');
-  console.log('📊 Endpoints publics trouvés:', PUBLIC_ENDPOINTS.length);
-  console.log('🎓 Endpoints pour débutants:', getBeginnerEndpoints().length);
+  console.log('📊 Endpoints Hyperliquid trouvés:', HYPERLIQUID_ENDPOINTS.length);
   
   // Afficher le premier endpoint pour vérification
-  const firstEndpoint = PUBLIC_ENDPOINTS[0];
+  const firstEndpoint = HYPERLIQUID_ENDPOINTS[0];
   console.log('🔍 Premier endpoint:', {
     id: firstEndpoint.id,
     name: firstEndpoint.name,
     method: firstEndpoint.method,
-    hasParams: firstEndpoint.params?.length > 0
+    hasParams: firstEndpoint.parameters?.length > 0
   });
 
   // ✅ Test 2 : Test des utilitaires de paramètres
@@ -51,27 +50,18 @@ export async function runQuickTest() {
     success: replaced.user === '0x123abc' && replaced.coin === 'BTC'
   });
 
-  // ✅ Test 3 : Test de connexion API (simple et rapide)
-  console.log('\n3️⃣ Test de connexion API...');
-  const connectionOk = await testApiConnection();
-  console.log('🌐 Connexion API:', connectionOk ? '✅ OK' : '❌ ÉCHEC');
-
-  // ✅ Test 4 : Test d'un endpoint simple (allMids)
-  if (connectionOk) {
-    console.log('\n4️⃣ Test d\'un endpoint simple (allMids)');
-    try {
-      const allMidsEndpoint = PUBLIC_ENDPOINTS.find(ep => ep.id === 'allMids');
-      const result = await hyperliquidApi.executeRequest(allMidsEndpoint);
-      
-      console.log('📈 Test allMids:', {
-        success: result.success,
-        status: result.status,
-        hasData: result.success && Object.keys(result.data).length > 0,
-        sampleKeys: result.success ? Object.keys(result.data).slice(0, 3) : null
-      });
-    } catch (error) {
-      console.log('❌ Erreur lors du test allMids:', error.message);
-    }
+  // ✅ Test 3 : Test simple d'un endpoint (allMids)
+  console.log('\n3️⃣ Test d\'un endpoint simple (allMids)');
+  try {
+    const allMidsEndpoint = HYPERLIQUID_ENDPOINTS.find(ep => ep.id === 'allMids');
+    const result = await hyperliquidApi.executeRequest('allMids');
+    
+    console.log('📈 Test allMids:', {
+      hasData: result && Object.keys(result).length > 0,
+      sampleKeys: result ? Object.keys(result).slice(0, 3) : null
+    });
+  } catch (error) {
+    console.log('❌ Erreur lors du test allMids:', error.message);
   }
 
   console.log('\n🎉 [TEST] Tests de structure terminés !');

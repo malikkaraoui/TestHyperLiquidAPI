@@ -24,7 +24,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import hyperliquidApi from '../api/hyperliquidService.js';
+import { hyperliquidApi } from '../api/hyperliquidService.js';
 import assetMapping from '../services/assetMappingService.js';
 
 /**

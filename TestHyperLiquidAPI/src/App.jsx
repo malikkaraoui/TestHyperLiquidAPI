@@ -1,210 +1,80 @@
-/**
- * ============================================================================
- * COMPOSANT APP - Point d'entrée principal de l'application
- * ============================================================================
- * 
- * Ce composant gère :
- * 1. L'initialisation du service de mapping des assets Hyperliquid
- * 2. Le chargement et affichage du dashboard BTC ou du playground API
- * 3. Les tests de structure au démarrage (en développement)
- * 
- * INITIALISATION AU DÉMARRAGE :
- * -----------------------------
- * - Appel au service AssetMappingService pour charger les métadonnées
- * - Tests de validation de la structure du projet
- * 
- * ARCHITECTURE :
- * --------------
- * App (ce fichier)
- *   ├─ BtcDashboard (dashboard temps réel BTC/USDT)
- *   └─ SimpleApiPlayground (interface utilisateur de test API)
- *       ├─ config/endpoints.js (configuration des endpoints)
- *       ├─ api/hyperliquidService.js (service API)
- *       ├─ services/assetMappingService.js (mapping Asset ID ↔ Nom)
- *       └─ components/ResponseDisplay.jsx (affichage enrichi)
- */
-
-import React, { useState } from 'react'
+import { useState } from 'react'
 import './App.css'
-import BtcDashboard from './components/BtcDashboard'
-import SimpleApiPlayground from './SimpleApiPlayground'
-import { runQuickTest } from './utils/quickTest'
-import assetMapping from './services/assetMappingService'
 
 function App() {
-  console.log('🎯 [App] Composant en cours de rendu');
+  const [selectedEndpoint, setSelectedEndpoint] = useState('allMids');
+  const [response, setResponse] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  /**
-   * État de chargement de l'initialisation
-   * Permet d'afficher un loader pendant le chargement des métadonnées
-   */
-  const [isInitializing, setIsInitializing] = useState(true);
+  const endpoints = [
+    { id: 'allMids', name: 'All Mids - Prix du marché', body: { type: 'allMids' } },
+    { id: 'meta', name: 'Meta - Métadonnées', body: { type: 'meta' } },
+    { id: 'l2Book', name: 'L2 Book - Carnet d\'ordres', body: { type: 'l2Book', coin: 'BTC' } },
+  ];
 
-  /**
-   * État d'erreur d'initialisation
-   * Stocke les erreurs éventuelles lors du chargement
-   */
-  const [initError, setInitError] = useState(null);
+  async function sendRequest() {
+    setLoading(true);
+    setResponse(null);
 
-  /**
-   * État de sélection de la vue
-   * 'dashboard' = Dashboard BTC/USDT
-   * 'playground' = API Playground
-   */
-  const [currentView, setCurrentView] = useState('dashboard');
+    try {
+      const endpoint = endpoints.find(e => e.id === selectedEndpoint);
+      
+      const res = await fetch('https://api.hyperliquid.xyz/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(endpoint.body)
+      });
 
-  /**
-   * ========================================================================
-   * EFFECT : INITIALISATION AU DÉMARRAGE
-   * ========================================================================
-   * 
-   * Exécuté une seule fois au montage du composant
-   * 
-   * PROCESSUS :
-   * 1. Initialisation du service AssetMappingService
-   * 2. Exécution des tests de structure (en développement)
-   * 3. Gestion des erreurs et logging
-   */
-  React.useEffect(() => {
-    async function initializeApp() {
-      try {
-        console.log('🔄 [App] Initialisation de l\'application...');
-        
-        // ====================================================================
-        // ÉTAPE 1 : Initialisation du service de mapping des assets
-        // ====================================================================
-        // Charge les métadonnées depuis l'endpoint Hyperliquid /info meta
-        // Crée les maps bidirectionnelles Asset ID ↔ Nom
-        console.log('📊 [App] Chargement des métadonnées Hyperliquid...');
-        await assetMapping.initialize();
-        console.log('✅ [App] Service de mapping initialisé avec succès');
-        
-        // ====================================================================
-        // ÉTAPE 2 : Tests de structure (développement uniquement)
-        // ====================================================================
-        // Valide que tous les fichiers et exports sont corrects
-        console.log('🧪 [App] Lancement des tests de structure...');
-        await runQuickTest();
-        console.log('✅ [App] Tests de structure réussis');
-        
-        // ====================================================================
-        // FIN D'INITIALISATION
-        // ====================================================================
-        setIsInitializing(false);
-        console.log('🎉 [App] Application initialisée avec succès!');
-        
-      } catch (error) {
-        // Gestion des erreurs d'initialisation
-        console.error('❌ [App] Erreur lors de l\'initialisation:', error);
-        setInitError(error.message);
-        setIsInitializing(false);
-      }
+      const data = await res.json();
+      setResponse(data);
+    } catch (error) {
+      setResponse({ error: error.message });
+    } finally {
+      setLoading(false);
     }
-
-    // Lancement de l'initialisation
-    initializeApp();
-  }, []); // [] = exécution une seule fois au montage
-
-  /**
-   * ========================================================================
-   * AFFICHAGE PENDANT L'INITIALISATION
-   * ========================================================================
-   * 
-   * Affiche un loader avec animation pendant le chargement des métadonnées
-   */
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin text-6xl mb-4">⏳</div>
-          <h2 className="text-2xl font-bold text-white mb-2">
-            Initialisation...
-          </h2>
-          <p className="text-gray-400">
-            Chargement des métadonnées Hyperliquid
-          </p>
-        </div>
-      </div>
-    );
   }
 
-  /**
-   * ========================================================================
-   * AFFICHAGE EN CAS D'ERREUR D'INITIALISATION
-   * ========================================================================
-   * 
-   * Affiche un message d'erreur si l'initialisation échoue
-   */
-  if (initError) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-red-900 bg-opacity-20 border border-red-500 rounded-lg p-6">
-          <div className="text-center">
-            <div className="text-6xl mb-4">❌</div>
-            <h2 className="text-2xl font-bold text-red-400 mb-2">
-              Erreur d'initialisation
-            </h2>
-            <p className="text-gray-300 mb-4">
-              {initError}
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg
-                         font-semibold transition-colors"
-            >
-              🔄 Réessayer
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /**
-   * ========================================================================
-   * AFFICHAGE NORMAL DE L'APPLICATION
-   * ========================================================================
-   * 
-   * Une fois l'initialisation réussie, affiche le dashboard BTC ou le playground
-   */
   return (
-    <>
-      {/* Barre de navigation pour switcher entre les vues */}
-      <nav className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold text-white">Hyperliquid Dashboard</h1>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentView('dashboard')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  currentView === 'dashboard'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-              >
-                ₿ Dashboard BTC
-              </button>
-              <button
-                onClick={() => setCurrentView('playground')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  currentView === 'playground'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-              >
-                🚀 API Playground
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-gray-900 text-white p-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        
+        <h1 className="text-3xl font-bold text-center mb-8">Hyperliquid API</h1>
 
-      {/* Affichage conditionnel de la vue sélectionnée */}
-      {currentView === 'dashboard' ? <BtcDashboard /> : <SimpleApiPlayground />}
-    </>
+        {/* Sélection de requête */}
+        <div className="bg-gray-800 rounded-lg p-6">
+          <label className="block text-sm font-medium mb-3">Sélectionner une requête</label>
+          <select 
+            value={selectedEndpoint}
+            onChange={(e) => setSelectedEndpoint(e.target.value)}
+            className="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2 text-white"
+          >
+            {endpoints.map(ep => (
+              <option key={ep.id} value={ep.id}>{ep.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Bouton Envoyer */}
+        <button
+          onClick={sendRequest}
+          disabled={loading}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 
+                     text-white px-6 py-3 rounded-lg font-semibold"
+        >
+          {loading ? 'Envoi en cours...' : 'Envoyer'}
+        </button>
+
+        {/* Zone de réponse JSON */}
+        {response && (
+          <div className="bg-gray-800 rounded-lg p-6">
+            <h2 className="text-lg font-semibold mb-3">Réponse JSON</h2>
+            <pre className="bg-gray-900 p-4 rounded text-sm overflow-auto max-h-96 text-green-400">
+              {JSON.stringify(response, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
